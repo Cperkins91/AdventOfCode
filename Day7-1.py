@@ -12,10 +12,9 @@ class elfFolder:
         self.children = children
         self.isFile = True
         ''' Add this if you want to add children in the init'''
-        '''
+
         if parent is not None:
             parent.addChild(self)
-        '''
 
     def __str__(self) -> str:
         indent, parent = "", self.parent
@@ -31,11 +30,6 @@ class elfFolder:
 
     @property
     def size(self) -> int:
-        '''
-        if self._size is None:
-            self._size = sum([child.size for child in self.children])
-        return self._size
-        '''
         if self._size is None:
             for child in self.children:
                 if self._size is None:
@@ -52,9 +46,9 @@ class elfFolder:
 def dir_size(elffolder: elfFolder, threshold: int, comparison: Callable
              ) -> Generator[elfFolder, None, None]:
     if not elffolder.isFile:
-        if comparison(elffolder.size, threshold):
+        if comparison(elffolder.size, threshold):  # if size < threshold
             yield elffolder
-        for child in elffolder.children:
+        for child in elffolder.children:  # iterate through the children
             yield from dir_size(child, threshold, comparison)
 
 
@@ -62,29 +56,27 @@ def main():
     threshold = 100000
     lines = open('cmdlines.txt', 'rt').read()
     lines = lines.split('\n')
-    root = curr_dir = elfFolder(lines.pop(0).split()[-1], None, None, [])
+    root = curr_dir = elfFolder(lines.pop(0).split()[-1], None, None, [])  # add the root dir
     for line in lines:
         line = line.split()
         if line[0] == '$':  # Line is a command
             if line[1] == 'cd':
                 if line[2] == '..':
-                    curr_dir = curr_dir.parent  # Change to new directory
-                else:
-                    child_dir = elfFolder(line[2], curr_dir, None, [])
-                    curr_dir.addChild(child_dir)
+                    curr_dir = curr_dir.parent  # Change to last directory
+                else:  # change to new dir
+                    child_dir = elfFolder(line[2], curr_dir, None, [])  # add new dir
                     curr_dir = child_dir
             if line[1] == 'ls':
                 pass
-            # if line[0] == 'dir': # line is folder
-            #   elfFolder(line[1], curr_dir, None, None)
         if line[0].isdigit():  # line is a file:
             child_dir = elfFolder(line[1], curr_dir, int(line[0]), None)
-            curr_dir.addChild(child_dir) #Add this if you dont want to use the
-            # conditional inside the init
-
     directories = dir_size(root, threshold, le)
     print(sum(directory.size for directory in directories))
-
+    TOTAL_SPACE = 70000000
+    REQ_SPACE = 30000000
+    freeSpace = TOTAL_SPACE - root.size
+    directories = dir_size(root, REQ_SPACE - freeSpace, ge) #find directories >= the space we must free
+    print(min(directory.size for directory in directories)) # print the smallest dir that is req to delete
 
 
 if __name__ == '__main__':
